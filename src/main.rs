@@ -9,7 +9,7 @@ use std::time::Instant;
 /// webdriver の録画を実行する関数。
 /// コマンドライン引数の呼び出し方が、cargo で実行と、.exe パスを渡す で -- の使い方が微妙に異なる点に注意する。
 /// Ex.1 cargo run -- -p 65478 -s f33e6812e7efb6e926b8801cf60f94e8 (cargo 実行時は、-- 必要)
-/// Ex.2 .\target\debug\webdriver-recoreder.exe -p 65478 -s f33e6812e7efb6e926b8801cf60f94e8 (.exe 実行時は、-- 不要)
+/// Ex.2 .\target\debug\webdriver-recorder.exe -p 65478 -s f33e6812e7efb6e926b8801cf60f94e8 (.exe 実行時は、-- 不要)
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let start = Instant::now();
