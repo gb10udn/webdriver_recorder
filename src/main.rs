@@ -19,28 +19,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
     let url = format!("http://localhost:{}/session/{}/screenshot", args.port_number, args.session_id);
-
-    
     let mut image_index = 0;
+    let mut failure_num = 0;
     loop {
-        let resp = reqwest::get(&url)  // INFO: 240201 パラメタ設定すると、base64 でとれた。
-            .await?
-            .json::<HashMap<String, String>>()
-            .await?;
+        let temp = reqwest::get(&url).await;
 
-        if let Some(base64_string) = resp.get("value") {
-            let binary_data = BASE64_STANDARD.decode(base64_string).unwrap();
-            let file_path = format!("{}/{}.png", base_dst_dir, image_index);
-            let mut file = File::create(file_path).expect("Unable to create file");
-            file.write_all(&binary_data).expect("Unable to write data to file");
+        match temp {
+            Ok(resp) => {
+                let resp = resp
+                    .json::<HashMap<String, String>>()
+                    .await?;
+        
+                if let Some(base64_string) = resp.get("value") {
+                    let binary_data = BASE64_STANDARD.decode(base64_string).unwrap();
+                    let file_path = format!("{}/{}.png", base_dst_dir, image_index);
+                    let mut file = File::create(file_path).expect("Unable to create file");
+                    file.write_all(&binary_data).expect("Unable to write data to file");
+                }
+                image_index += 1;
+            },
+            Err(_) => {
+                failure_num += 1;
+            },
         }
 
-        image_index += 1;
-        if image_index > 100 {  // TODO: 240204 エラー３回で抜けるなどのように実装せよ。
+        if failure_num > 2 {  // TODO: 240204 エラー３回で抜けるなどのように実装せよ。
             break;
         }
     }
-
     Ok(())
 }
 
