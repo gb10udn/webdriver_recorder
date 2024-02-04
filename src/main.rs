@@ -28,7 +28,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         match temp {
             Ok(resp) => {
-                // [START] save image
                 let resp = resp
                     .json::<HashMap<String, String>>()
                     .await;
@@ -36,10 +35,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match resp {
                     Ok(resp) => {
                         if let Some(base64_string) = resp.get("value") {
+                            // [START] save image
                             let binary_data = BASE64_STANDARD.decode(base64_string).unwrap();
-                            let file_path = format!("{}/image{:05}.png", base_dst_dir, image_index);
+                            let file_path = format!("{}/image{:05}.png", base_dst_dir, image_index);  // FIXME: 240204 0 埋めの桁数が連動している箇所があるので、注意する。
                             let mut file = File::create(file_path).expect("Unable to create file");
                             file.write_all(&binary_data).expect("Unable to write data to file");
+                            // [END] save image
                         }
                         image_index += 1;
                         failure_num = 0;
@@ -48,7 +49,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         failure_num += 1;   // INFO: 240204 途中で webdriver が切断された場合？
                     }
                 }
-                // [END] save image
             },
             Err(_) => {
                 failure_num += 1;  // INFO: 240204 最初からパラメタ失敗した場合？
@@ -66,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 fn create_movie(base_dir: &str) {  // TODO: 240204 出力先のパスをもう少し使いやすくする。
-    let output = Command::new("ffmpeg")
+    let output = Command::new("ffmpeg")  // FIXME: 240204 ffmpeg がパスが通っていない場合にエラーをあげれるようにする？
         .args(["-i", &format!("{}/image%05d.png", base_dir), "-c:v", "libx264", "output.mp4"])  // TODO: 240204 fps を最適化する。
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
