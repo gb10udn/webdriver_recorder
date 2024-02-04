@@ -37,13 +37,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     file.write_all(&binary_data).expect("Unable to write data to file");
                 }
                 image_index += 1;
+                failure_num = 0;
             },
             Err(_) => {
                 failure_num += 1;
             },
         }
 
-        if failure_num > 2 {  // TODO: 240204 エラー３回で抜けるなどのように実装せよ。
+        if failure_num > 2 {
             break;
         }
     }
