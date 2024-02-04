@@ -1,7 +1,9 @@
 use std::collections::HashMap;
+use std::io::Write;
 use std::fs::File;
 use std::fs;
-use std::io::Write;
+use std::process::Command;
+use std::process::Stdio;
 use base64::prelude::*;
 use clap::Parser;
 
@@ -26,21 +28,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         match temp {
             Ok(resp) => {
+                // [START] save image
                 let resp = resp
                     .json::<HashMap<String, String>>()
-                    .await?;
-        
-                if let Some(base64_string) = resp.get("value") {
-                    let binary_data = BASE64_STANDARD.decode(base64_string).unwrap();
-                    let file_path = format!("{}/{}.png", base_dst_dir, image_index);
-                    let mut file = File::create(file_path).expect("Unable to create file");
-                    file.write_all(&binary_data).expect("Unable to write data to file");
+                    .await;
+
+                match resp {
+                    Ok(resp) => {
+                        if let Some(base64_string) = resp.get("value") {
+                            let binary_data = BASE64_STANDARD.decode(base64_string).unwrap();
+                            let file_path = format!("{}/image{:05}.png", base_dst_dir, image_index);
+                            let mut file = File::create(file_path).expect("Unable to create file");
+                            file.write_all(&binary_data).expect("Unable to write data to file");
+                        }
+                        image_index += 1;
+                        failure_num = 0;
+                    },
+                    Err(_) => {
+                        failure_num += 1;   // INFO: 240204 途中で webdriver が切断された場合？
+                    }
                 }
-                image_index += 1;
-                failure_num = 0;
+                // [END] save image
             },
             Err(_) => {
-                failure_num += 1;
+                failure_num += 1;  // INFO: 240204 最初からパラメタ失敗した場合？
             },
         }
 
@@ -48,7 +59,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
     }
+    create_movie(&base_dst_dir);
+    // TODO: 240204 ./dst フォルダを削除する。
     Ok(())
+}
+
+
+fn create_movie(base_dir: &str) {  // TODO: 240204 出力先のパスをもう少し使いやすくする。
+    let output = Command::new("ffmpeg")
+        .args(["-i", &format!("{}/image%05d.png", base_dir), "-c:v", "libx264", "output.mp4"])  // TODO: 240204 fps を最適化する。
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+    println!("{:?}", output);
 }
 
 

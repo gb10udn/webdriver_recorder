@@ -2,5 +2,6 @@
 *.cmd
 *.code-workspace
 *.png
+*.mp4
 /target
 tdoc/
