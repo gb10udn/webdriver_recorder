@@ -7,6 +7,7 @@ use std::process::Stdio;
 use std::time;
 use base64::prelude::*;
 use clap::Parser;
+use chrono::Local;
 
 
 /// webdriver の録画を実行する関数。
@@ -16,8 +17,10 @@ use clap::Parser;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // [START] set params
-    let base_dst_dir = "./webdriver_recorder_dist";
-    fs::create_dir_all(base_dst_dir)?;
+    let image_base_dst = "./webdriver_recorder_dist_image";
+    let movie_base_dst = "./webdriver_recorder_dist";
+    fs::create_dir_all(image_base_dst)?;
+    fs::create_dir_all(movie_base_dst)?;
     // [END] set params
 
     let args = Args::parse();
@@ -40,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(base64_string) = resp.get("value") {
                             // [START] save image
                             let binary_data = BASE64_STANDARD.decode(base64_string).unwrap();
-                            let file_path = format!("{}/image{:05}.png", base_dst_dir, image_index);  // FIXME: 240204 0 埋めの桁数が連動している箇所があるので、注意する。
+                            let file_path = format!("{}/image{:05}.png", image_base_dst, image_index);  // FIXME: 240204 0 埋めの桁数が連動している箇所があるので、注意する。
                             let mut file = File::create(file_path).expect("Unable to create file");
                             file.write_all(&binary_data).expect("Unable to write data to file");
                             // [END] save image
@@ -65,15 +68,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let duration = start_time.elapsed().as_secs();
     let fps = (image_index as f64 / duration as f64).round() as usize;
 
-    create_movie(&base_dst_dir, &fps);
-    // TODO: 240204 ./dst フォルダを削除する。 (.png ファイルを削除する。)
+    create_movie(image_base_dst, movie_base_dst, &fps);
+    fs::remove_dir_all(image_base_dst)?;
     Ok(())
 }
 
 
-fn create_movie(base_dir: &str, fps: &usize) {
+fn create_movie(src_base_dir: &str, dst_base_dir: &str, fps: &usize) {
+
+    let now = Local::now();
+    let now = now.format("%Y%m%d_%H%M%S").to_string();
+    let dst = format!("{}\\{}_output.mp4", dst_base_dir, now);
+
     let output = Command::new("ffmpeg")  // FIXME: 240204 ffmpeg がパスが通っていない場合にエラーをあげれるようにする？
-        .args(["-i", &format!("{}/image%05d.png", base_dir), "-c:v", "libx264", "-r", &fps.to_string(), "output.mp4"])
+        .args(["-i", &format!("{}/image%05d.png", src_base_dir), "-c:v", "libx264", "-r", &fps.to_string(), &dst])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
